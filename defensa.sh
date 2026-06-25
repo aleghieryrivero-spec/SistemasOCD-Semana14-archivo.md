@@ -1,21 +1,32 @@
-#!/bin/bash
-# =====================================================================
-# GUÍA DE LABORATORIO 15 - SCRIPT DE MITIGACIÓN
-# =====================================================================
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "[+] Iniciando Plan de Acción y Despliegue de Contención..."
+CHAIN_L4="SYN_RATE_LIMIT"
+PUERTO=80
 
-# 1. LIMPIEZA / IDEMPOTENCIA
-# Remueve reglas previas que contengan la etiqueta de control para evitar duplicados
-iptables-save | grep -v "#LAB15" | iptables-restore
+# Limpieza idempotente
+if iptables -L "$CHAIN_L4" -n &>/dev/null 2>&1; then
+    iptables -F "$CHAIN_L4"
+    iptables -D INPUT -p tcp --dport "$PUERTO" -j "$CHAIN_L4" 2>/dev/null || true
+    iptables -X "$CHAIN_L4"
+fi
 
-# 2. MITIGACIÓN CAPA 4: Control de Inundación SYN (SYN Flood Rate Limiting)
-# Limita las conexiones nuevas (SYN) por minuto desde cualquier origen
-iptables -A INPUT -p tcp --syn -m limit --limit 20/minute --limit-burst 50 -j ACCEPT -m comment --comment "#LAB15"
-iptables -A INPUT -p tcp --syn -j DROP -m comment --comment "#LAB15"
+if iptables -C INPUT -p tcp --dport "$PUERTO" \
+     -m string --string "db.sql" --algo bm -j DROP 2>/dev/null; then
+    iptables -D INPUT -p tcp --dport "$PUERTO" \
+        -m string --string "db.sql" --algo bm -j DROP
+fi
 
-# 3. MITIGACIÓN CAPA 7: Bloqueo por Inspección de Cadenas (String Matching)
-# Detecta e intercepta la petición HTTP antes de que Apache lea el disco duro
-iptables -A INPUT -p tcp --dport 80 -m string --algo bm --string "GET /db.sql" -j DROP -m comment --comment "#LAB15"
+# Defensa Capa 4 — Rate Limiting SYN
+iptables -N "$CHAIN_L4"
+iptables -A "$CHAIN_L4" -p tcp --syn -m limit --limit 10/s --limit-burst 20 -j ACCEPT
+iptables -A "$CHAIN_L4" -p tcp --syn -j DROP
+iptables -A INPUT -p tcp --dport "$PUERTO" -j "$CHAIN_L4"
 
-echo "[+] Filtros aplicados exitosamente. Sistema protegido sin desconectar usuarios."
+# Defensa Capa 7 — Bloqueo de db.sql
+iptables -I INPUT -p tcp --dport "$PUERTO" \
+    -m string --string "db.sql" --algo bm -j DROP
+
+echo "Defensa activa. Reglas L4 y L7 aplicadas."
+iptables -L INPUT -n -v --line-numbers
+
