@@ -3,7 +3,7 @@
 # reset_lab.sh — Restauración completa del entorno post-laboratorio
 # Curso : Sistemas Operativos de Código Abierto — Guía de Laboratorio 15
 # Entorno: Ubuntu Server 26 | VMware NAT 10.160.10.0/24
-# Autor  : Aleghiery Williams Rivero Roman
+# Autor  : Lia Gabriela Flores Mendoza
 # ADVERTENCIA: Este script elimina TODAS las reglas de iptables.
 #              Úsalo SOLO en el entorno de laboratorio aislado.
 # =============================================================================
