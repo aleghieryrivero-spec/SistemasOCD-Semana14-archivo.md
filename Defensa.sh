@@ -3,7 +3,7 @@
 # defensa.sh — Mitigación dual: SYN Flood (L4) + HTTP String Matching (L7)
 # Curso : Sistemas Operativos de Código Abierto — Guía de Laboratorio 15
 # Entorno: Ubuntu Server 26 | VMware NAT 10.160.10.0/24
-# Autor  : Aleghiery Williams Rivero Roman
+# Autor  : Lia Gabriela Flores Mendoza
 # =============================================================================
 set -euo pipefail
 
